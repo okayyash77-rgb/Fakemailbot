@@ -27,14 +27,36 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("🗑️ Email Delete Karo", callback_data="delete_email")]
     ]
     markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text("FakeMail Bot mein swagat hai!\n\nNeeche se option chuno:", reply_markup=markup)
+    await update.message.reply_text(
+        "👋 *FakeMail Bot mein swagat hai!*\n\n"
+        "🔐 *Apni privacy protect karo!*\n\n"
+        "📧 Temporary email banao aur kisi bhi website pe use karo!\n\n"
+        "⬇️ *Neeche se option chuno:*",
+        parse_mode="Markdown",
+        reply_markup=markup
+    )
+
+async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(
+        "🆘 *Help Menu*\n\n"
+        "✏️ *Custom Email* — Apne naam se email banao\n"
+        "📧 *Random Email* — Random email banao\n"
+        "📬 *Inbox* — Emails dekho\n"
+        "🗑️ *Delete* — Email delete karo\n\n"
+        "💡 *Tip:* Email kisi ko bhi de sakte ho!",
+        parse_mode="Markdown"
+    )
 
 async def custom_email(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    user_id = update.effective_user.id
     context.user_data["waiting_for_username"] = True
-    await query.message.reply_text("Apna pasandida username likho!\n\nJaise: yash123 ya coolboy456\n\n(Sirf letters aur numbers — koi space nahi!)")
+    await query.message.reply_text(
+        "✏️ *Apna username likho!*\n\n"
+        "Jaise: yash123 ya `coolboy456`\n\n"
+        "_Sirf letters aur numbers!_",
+        parse_mode="Markdown"
+    )
 
 async def handle_username(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
@@ -42,7 +64,7 @@ async def handle_username(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     username = update.message.text.strip().lower()
     if not username.isalnum():
-        await update.message.reply_text("Sirf letters aur numbers use karo! Dobara try karo:")
+        await update.message.reply_text("⚠️ Sirf letters aur numbers use karo!")
         return
     context.user_data["waiting_for_username"] = False
     email, sid = get_email(username)
@@ -53,7 +75,8 @@ async def handle_username(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ]
     markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text(
-        f"✅ Tera custom email ready hai!\n\n{email}\n\nYe email kisi ko bhi de sakte ho — unlimited use kar sakte ho!",
+        f"✅ *Tera custom email ready hai!*\n\n`{email}`\n\n_Unlimited use karo!_",
+        parse_mode="Markdown",
         reply_markup=markup
     )
 
@@ -72,20 +95,3 @@ async def random_email(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ]
     markup = InlineKeyboardMarkup(keyboard)
     await query.message.reply_text(
-        f"✅ Tera random email:\n\n{email}\n\nUnlimited use karo!",
-        reply_markup=markup
-    )
-
-async def inbox_check(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    user_id = update.effective_user.id
-    if user_id not in user_emails:
-        await query.message.reply_text("Pehle email banao!")
-        return
-    sid = user_emails[user_id]["sid"]
-    email = user_emails[user_id]["email"]
-    messages = check_inbox(sid)
-    if not messages:
-        keyboard = [[InlineKeyboardButton("🔄 Refresh", callback_data="check_inbox")]]
-        markup = InlineKeyboardMarkup(keyboard)
