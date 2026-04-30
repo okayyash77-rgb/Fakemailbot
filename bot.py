@@ -9,7 +9,7 @@ TOKEN = "8796073858:AAFAs8De-EKsS5Xp851U6QYcZ5m6cjM_z5Q"
 user_emails = {}
 
 def get_email(username):
-    return username + "@di2.in", username
+    return username + "@maildrop.cc", username
 
 def check_inbox(username):
     res = requests.get("https://maildrop.cc/v2/mailbox/" + username)
