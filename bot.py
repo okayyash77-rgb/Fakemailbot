@@ -7,16 +7,17 @@ TOKEN = "8796073858:AAFAs8De-EKsS5Xp851U6QYcZ5m6cjM_z5Q"
 user_emails = {}
 
 def get_email(username):
-    res = requests.get("https://api.guerrillamail.com/ajax.php?f=set_email_user&email_user=" + username)
+    return username + "@maildrop.cc", username
+
+def check_inbox(username):
+    res = requests.get("https://maildrop.cc/v2/mailbox/" + username)
     data = res.json()
-    return data["email_addr"], data["sid_token"]
+    if isinstance(data, list):
+        return data
+    return []
 
-def check_inbox(sid_token):
-    res = requests.get("https://api.guerrillamail.com/ajax.php?f=get_email_list&offset=0&sid_token=" + sid_token)
-    return res.json().get("list", [])
-
-def read_email(sid_token, mail_id):
-    res = requests.get("https://api.guerrillamail.com/ajax.php?f=fetch_email&email_id=" + str(mail_id) + "&sid_token=" + sid_token)
+def read_email(username, mail_id):
+    res = requests.get("https://maildrop.cc/v2/mailbox/" + username + "/" + str(mail_id))
     return res.json()
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -33,7 +34,7 @@ async def custom_email(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     context.user_data["waiting"] = True
-    await query.message.reply_text("Apna username likho! Jaise: yash123")
+    await query.message.reply_text("Apna username likho! Jaise: yash123\n\nTumhara email banega: yash123@maildrop.cc")
 
 async def handle_username(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
@@ -48,23 +49,23 @@ async def handle_username(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("Delete Karo", callback_data="delete_email")]
     ]
     markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text("Tera email: " + email, reply_markup=markup)
+    await update.message.reply_text("Tera email ready hai!\n\n" + email + "\n\nUnlimited use karo!", reply_markup=markup)
 
 async def random_email(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     user_id = update.effective_user.id
-    res = requests.get("https://api.guerrillamail.com/ajax.php?f=get_email_address")
-    data = res.json()
-    email = data["email_addr"]
-    sid = data["sid_token"]
+    import random
+    import string
+    username = ''.join(random.choices(string.ascii_lowercase + string.digits, k=8))
+    email, sid = get_email(username)
     user_emails[user_id] = {"email": email, "sid": sid}
     keyboard = [
         [InlineKeyboardButton("Inbox Check Karo", callback_data="check_inbox")],
         [InlineKeyboardButton("Delete Karo", callback_data="delete_email")]
     ]
     markup = InlineKeyboardMarkup(keyboard)
-    await query.message.reply_text("Tera random email: " + email, reply_markup=markup)
+    await query.message.reply_text("Tera random email:\n\n" + email + "\n\nUnlimited use karo!", reply_markup=markup)
 
 async def inbox_check(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -82,9 +83,9 @@ async def inbox_check(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.message.reply_text(email + " ka inbox khali hai.", reply_markup=markup)
         return
     for msg in messages[:5]:
-        keyboard = [[InlineKeyboardButton("Read karo", callback_data="read_" + str(msg["mail_id"]))]]
+        keyboard = [[InlineKeyboardButton("Read karo", callback_data="read_" + str(msg["id"]))]]
         markup = InlineKeyboardMarkup(keyboard)
-        await query.message.reply_text("From: " + msg["mail_from"] + "\nSubject: " + msg["mail_subject"], reply_markup=markup)
+        await query.message.reply_text("From: " + str(msg.get("origfrom", "Unknown")) + "\nSubject: " + str(msg.get("subject", "No subject")), reply_markup=markup)
 
 async def read_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -96,9 +97,9 @@ async def read_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     sid = user_emails[user_id]["sid"]
     msg = read_email(sid, mail_id)
-    body = msg.get("mail_body") or "Content nahi mila"
+    body = msg.get("body") or "Content nahi mila"
     body = body[:1000]
-    await query.message.reply_text("From: " + str(msg.get("mail_from")) + "\nSubject: " + str(msg.get("mail_subject")) + "\n\n" + body)
+    await query.message.reply_text("From: " + str(msg.get("origfrom", "Unknown")) + "\nSubject: " + str(msg.get("subject", "No subject")) + "\n\n" + body)
 
 async def delete_email(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
