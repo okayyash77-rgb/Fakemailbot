@@ -29,24 +29,18 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text("FakeMail Bot mein swagat hai! Neeche se option chuno:", reply_markup=markup)
 
-async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Help Menu\n\nCustom Email - Apne naam se email banao\nRandom Email - Random email banao\nInbox - Emails dekho\nDelete - Email delete karo\n\nTip: Email kisi ko bhi de sakte ho!")
-
 async def custom_email(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    context.user_data["waiting_for_username"] = True
-    await query.message.reply_text("Apna username likho! Jaise: yash123 ya coolboy456\n\nSirf letters aur numbers!")
+    context.user_data["waiting"] = True
+    await query.message.reply_text("Apna username likho! Jaise: yash123")
 
 async def handle_username(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
-    if not context.user_data.get("waiting_for_username"):
+    if not context.user_data.get("waiting"):
         return
     username = update.message.text.strip().lower()
-    if not username.isalnum():
-        await update.message.reply_text("Sirf letters aur numbers use karo!")
-        return
-    context.user_data["waiting_for_username"] = False
+    context.user_data["waiting"] = False
     email, sid = get_email(username)
     user_emails[user_id] = {"email": email, "sid": sid}
     keyboard = [
@@ -54,7 +48,7 @@ async def handle_username(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("Delete Karo", callback_data="delete_email")]
     ]
     markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text("Tera custom email ready hai!\n\n" + email + "\n\nUnlimited use karo!", reply_markup=markup)
+    await update.message.reply_text("Tera email: " + email, reply_markup=markup)
 
 async def random_email(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -70,7 +64,7 @@ async def random_email(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("Delete Karo", callback_data="delete_email")]
     ]
     markup = InlineKeyboardMarkup(keyboard)
-    await query.message.reply_text("Tera random email:\n\n" + email + "\n\nUnlimited use karo!", reply_markup=markup)
+    await query.message.reply_text("Tera random email: " + email, reply_markup=markup)
 
 async def inbox_check(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -85,7 +79,7 @@ async def inbox_check(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not messages:
         keyboard = [[InlineKeyboardButton("Refresh", callback_data="check_inbox")]]
         markup = InlineKeyboardMarkup(keyboard)
-        await query.message.reply_text(email + " ka inbox khali hai abhi.", reply_markup=markup)
+        await query.message.reply_text(email + " ka inbox khali hai.", reply_markup=markup)
         return
     for msg in messages[:5]:
         keyboard = [[InlineKeyboardButton("Read karo", callback_data="read_" + str(msg["mail_id"]))]]
@@ -115,15 +109,13 @@ async def delete_email(update: Update, context: ContextTypes.DEFAULT_TYPE):
         del user_emails[user_id]
         keyboard = [[InlineKeyboardButton("Naya Email Banao", callback_data="random_email")]]
         markup = InlineKeyboardMarkup(keyboard)
-        await query.message.reply_text(email + " delete ho gaya! Ab naya email bana sakte ho!", reply_markup=markup)
+        await query.message.reply_text(email + " delete ho gaya!", reply_markup=markup)
     else:
-        await query.message.reply_text("Koi email nahi hai abhi!")
+        await query.message.reply_text("Koi email nahi hai!")
 
 def main():
     app = ApplicationBuilder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("help", help_command))
-    app.add_handler(CommandHandler("newemail", random_email))
     app.add_handler(CallbackQueryHandler(custom_email, pattern="custom_email"))
     app.add_handler(CallbackQueryHandler(random_email, pattern="random_email"))
     app.add_handler(CallbackQueryHandler(inbox_check, pattern="check_inbox"))
